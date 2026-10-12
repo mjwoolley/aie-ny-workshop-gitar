@@ -58,3 +58,12 @@ def test_cannot_transfer_after_the_event_starts(client, clock, alice_order):
     clock.advance(days=40)
     resp = transfer(client, alice_order["ticket_ids"][0], "bob@example.com")
     assert resp.status_code == 409
+
+
+def test_cannot_cancel_an_order_after_transferring_a_ticket(client, alice_order):
+    ticket_id = alice_order["ticket_ids"][0]
+    transfer(client, ticket_id, "bob@example.com")
+    resp = client.post(f"/orders/{alice_order['id']}/cancel", headers=ALICE)
+    assert resp.status_code == 409
+    assert resp.get_json() == {"error": "order has transferred tickets"}
+    assert [t["id"] for t in held_tickets(client, BOB)] == [ticket_id]
